@@ -47,6 +47,8 @@ async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery) -> No
 
 import httpx
 
+STAR_PRICE_RUB = 1.7
+
 @router.message(F.successful_payment)
 async def process_successful_payment(message: Message):
     payment_info = message.successful_payment
@@ -56,7 +58,7 @@ async def process_successful_payment(message: Message):
     async with httpx.AsyncClient() as client:
         await client.post(
             "https://server2.anonixvpn.space/payments/stars/",
-            json={"user_id": user_id, "amount": amount}
+            json={"user_id": user_id, "amount": amount*STAR_PRICE_RUB}
         )
 
     await message.answer(
