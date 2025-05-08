@@ -54,11 +54,13 @@ async def process_successful_payment(message: Message):
     payment_info = message.successful_payment
     user_id, amount = payment_info.invoice_payload.split(":")
 
+    amount = int(amount)  # приводим к числу
+
     # Отправка запроса в backend
     async with httpx.AsyncClient() as client:
         await client.post(
             "https://server2.anonixvpn.space/payments/stars/",
-            json={"user_id": user_id, "amount": amount*STAR_PRICE_RUB}
+            json={"user_id": user_id, "amount": amount * STAR_PRICE_RUB}
         )
 
     await message.answer(
