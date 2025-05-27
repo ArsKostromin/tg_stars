@@ -47,7 +47,7 @@ async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery) -> No
 
 import httpx
 
-STAR_PRICE_RUB = 1.7
+STAR_PRICE_RUB = 1
 
 @router.message(F.successful_payment)
 async def process_successful_payment(message: Message):
