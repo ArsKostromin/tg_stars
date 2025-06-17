@@ -1,13 +1,21 @@
 from aiogram import Router, F, html
 from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command
-from aiogram.types import Message, LabeledPrice, PreCheckoutQuery
+from aiogram.types import Message, LabeledPrice, PreCheckoutQuery, CallbackQuery
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import StatesGroup, State
+import httpx
 
 from config import STARS_AMOUNT, MESSAGES
 from loader import bot
 from src.keyboards import star_amount_keyboard
+
 router = Router(name=__name__)
-from aiogram import types
+
+
+# FSM для кастомного ввода
+class PaymentStates(StatesGroup):
+    waiting_for_custom_amount = State()
 
 
 @router.message(Command("start"))
@@ -16,45 +24,68 @@ async def start_handler(message: Message):
 
 
 @router.callback_query(F.data.startswith("pay:"))
-async def handle_star_payment_callback(callback: types.CallbackQuery):
-    amount = int(callback.data.split(":")[1])
+async def handle_star_payment_callback(callback: CallbackQuery, state: FSMContext):
+    action = callback.data.split(":")[1]
+
+    if action == "custom":
+        await callback.message.answer("Введите количество звёзд, которое хотите купить (целое число):")
+        await state.set_state(PaymentStates.waiting_for_custom_amount)
+    else:
+        amount = int(action)
+        prices = [LabeledPrice(label=f'{amount} Stars', amount=amount)]
+
+        await bot.send_invoice(
+            chat_id=callback.from_user.id,
+            title=f'Stars Payment: {amount}',
+            description='Оплата звёзд для пополнения баланса.',
+            provider_token="",
+            currency="XTR",
+            prices=prices,
+            start_parameter='stars-payment',
+            payload=f'{callback.from_user.id}:{amount}'
+        )
+        await callback.answer()
+
+
+@router.message(PaymentStates.waiting_for_custom_amount)
+async def handle_custom_amount(message: Message, state: FSMContext):
+    try:
+        amount = int(message.text)
+        if amount <= 0:
+            raise ValueError
+    except ValueError:
+        await message.answer("⚠️ Введите корректное положительное целое число.")
+        return
+
     prices = [LabeledPrice(label=f'{amount} Stars', amount=amount)]
 
     await bot.send_invoice(
-        chat_id=callback.from_user.id,
+        chat_id=message.from_user.id,
         title=f'Stars Payment: {amount}',
         description='Оплата звёзд для пополнения баланса.',
         provider_token="",
         currency="XTR",
         prices=prices,
         start_parameter='stars-payment',
-        payload=f'{callback.from_user.id}:{amount}'  # 👈 в payload сохраняем user_id и amount
+        payload=f'{message.from_user.id}:{amount}'
     )
-    await callback.answer()
 
+    await state.clear()
 
 
 @router.pre_checkout_query()
 async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery) -> None:
-    """
-    Validate the pre-checkout query before payment.
-
-    Args:
-        pre_checkout_query (PreCheckoutQuery): Pre-checkout query to validate
-    """
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
 
-import httpx
-
-STAR_PRICE_RUB = 1
+STAR_PRICE_RUB = 0.013  # цена за 1 звезду в рублях
 
 @router.message(F.successful_payment)
 async def process_successful_payment(message: Message):
     payment_info = message.successful_payment
     user_id, amount = payment_info.invoice_payload.split(":")
 
-    amount = int(amount)  # приводим к числу
+    amount = int(amount)
 
     # Отправка запроса в backend
     async with httpx.AsyncClient() as client:
