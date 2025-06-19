@@ -9,6 +9,6 @@ def star_amount_keyboard():
             InlineKeyboardButton(text="⭐ 3700~48$", callback_data="pay:3700"),
         ],
         [
-            InlineKeyboardButton(text="💰 Ввести свою сумму", callback_data="pay:custom")
+            InlineKeyboardButton(text="💰 Ввести сумму", callback_data="pay:custom")
         ]
     ])
