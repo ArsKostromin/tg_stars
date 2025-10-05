@@ -21,6 +21,7 @@ from aiogram import Dispatcher
 from loader import bot
 from src.payment import router as payment_router
 from src.refund import router as refund_router
+from commands import set_bot_commands 
 
 logging.basicConfig(
     level=logging.ERROR,
@@ -38,6 +39,7 @@ dp.include_router(refund_router)
 async def main() -> None:
     """Initialize and start the bot."""
     try:
+        await set_bot_commands(bot)
         await dp.start_polling(bot)
     finally:
         await dp.stop_polling()
