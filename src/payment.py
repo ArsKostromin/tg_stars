@@ -59,7 +59,7 @@ async def process_successful_payment(message: Message):
     # Отправка запроса в backend
     async with httpx.AsyncClient() as client:
         await client.post(
-            "https://server2.anonixvpn.space/payments/stars/",
+            "https://admin.anonixvpn.space/payments/stars/",
             json={"user_id": user_id, "amount": amount * STAR_PRICE_RUB}
         )
 
